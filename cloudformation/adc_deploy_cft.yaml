@@ -1,0 +1,372 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: CloudFormation template to deploy an AWS VPC with subnets, security groups, network interfaces, and an EC2 instance configured with specific user data.
+
+Parameters:
+  Region:
+    Description: AWS region to deploy the resources
+    Type: String
+    Default: us-east-1
+
+  VpcCidr:
+    Description: CIDR block for the VPC
+    Type: String
+    Default: 10.0.0.0/16
+
+  SubnetCidrs:
+    Description: List of CIDR blocks for the subnets, should be /24
+    Type: CommaDelimitedList
+    Default: 10.0.1.0/24,10.0.2.0/24,10.0.3.0/24
+
+  AvailabilityZone:
+    Description: Availability zone for the subnets
+    Type: String
+    Default: a
+
+  InstanceType:
+    Description: EC2 instance type
+    Type: String
+    Default: c4.large
+
+  AmiId:
+    Description: AMI ID for the EC2 instance
+    Type: String
+    Default: ami-09fd2b8b128dc0f2d
+
+  DeploymentId:
+    Description: Unique identifier for each deployment
+    Type: String
+    Default: default
+
+  AdminPassword:
+    Description: Admin password
+    Type: String
+    Default: admin123
+
+  AdminUser:
+    Description: Admin username
+    Type: String
+    Default: admin
+
+  GelUrlPrimary:
+    Description: GEL primary URL
+    Type: String
+    Default: http://primary.gel.example.com
+
+  GelUrlSecondary:
+    Description: GEL secondary URL
+    Type: String
+    Default: http://secondary.gel.example.com
+
+  GelEntId:
+    Description: GEL enterprise ID
+    Type: String
+    Default: 12345
+
+  GelThroughputMb:
+    Description: GEL throughput in MB
+    Type: Number
+    Default: 100
+
+  GelDnsPri:
+    Description: GEL primary DNS
+    Type: String
+    Default: 8.8.8.8
+
+  NtpPrimaryServer:
+    Description: NTP primary server IP Address only
+    Type: String
+    Default: 132.163.97.8
+
+  NtpTzone:
+    Description: NTP time zone
+    Type: String
+    Default: UTC
+
+  CcLocalIp:
+    Description: Local IP address
+    Type: String
+    Default: 10.0.1.2
+
+  CcRemoteIp:
+    Description: Remote IP address
+    Type: String
+    Default: 0.0.0.0
+
+  VmName:
+    Description: VM name
+    Type: String
+    Default: default-vm
+
+  Hst1Ip:
+    Description: Syslog Server IP for syslog host 1
+    Type: String
+    Default: 1.2.3.4
+
+  Hst1Severity:
+    Description: Severity[0-7] for syslog host 1
+    Type: Number
+    Default: 7
+
+  Hst1Facility:
+    Description: Facility[0-7] for syslog host 1
+    Type: Number
+    Default: 0
+
+  Hst1Module:
+    Description: Module for syslog host 1
+    Type: String
+    Default: all
+
+  Hst1Port:
+    Description: Port for syslog host 1
+    Type: Number
+    Default: 514
+
+  Hst2Ip:
+    Description: Syslog Server IP for syslog host 2
+    Type: String
+    Default: 0.0.0.0
+
+  Hst2Severity:
+    Description: Severity for syslog host 2
+    Type: Number
+    Default: 7
+
+  Hst2Facility:
+    Description: Facility for syslog host 2
+    Type: Number
+    Default: 0
+
+  Hst2Module:
+    Description: Module for syslog host 2
+    Type: String
+    Default: all
+
+  Hst2Port:
+    Description: Port for syslog host 2
+    Type: Number
+    Default: 514
+
+Resources:
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VpcCidr
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: !Sub "ADCVPC-${DeploymentId}"
+
+  ManagementSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Select [0, !Ref SubnetCidrs]
+      AvailabilityZone: !Sub "${Region}${AvailabilityZone}"
+      Tags:
+        - Key: Name
+          Value: !Sub "ADCMGMTNet-${DeploymentId}"
+
+  DataSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Select [1, !Ref SubnetCidrs]
+      AvailabilityZone: !Sub "${Region}${AvailabilityZone}"
+      Tags:
+        - Key: Name
+          Value: !Sub "ADCDataNet-${DeploymentId}"
+
+  ServersSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Select [2, !Ref SubnetCidrs]
+      AvailabilityZone: !Sub "${Region}${AvailabilityZone}"
+      Tags:
+        - Key: Name
+          Value: !Sub "ADCServersNet-${DeploymentId}"
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub "ADCIGW-${DeploymentId}"
+
+  AttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref InternetGateway
+
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub "ADCPublicRouteTable-${DeploymentId}"
+
+  DefaultRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  ManagementRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref ManagementSubnet
+      RouteTableId: !Ref PublicRouteTable
+
+  DataRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref DataSubnet
+      RouteTableId: !Ref PublicRouteTable
+
+  SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security Group for Alteon VA
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: -1
+          FromPort: 0
+          ToPort: 0
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 3121
+          ToPort: 3121
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 2222
+          ToPort: 2222
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: !Sub "AlteonSG-${DeploymentId}"
+
+  ManagementNetworkInterface:
+    Type: AWS::EC2::NetworkInterface
+    Properties:
+      SubnetId: !Ref ManagementSubnet
+      GroupSet: 
+        - !Ref SecurityGroup
+      Tags:
+        - Key: Name
+          Value: !Sub "ADCMgmtENI-${DeploymentId}"
+
+  DataNetworkInterface:
+    Type: AWS::EC2::NetworkInterface
+    Properties:
+      SubnetId: !Ref DataSubnet
+      GroupSet:
+        - !Ref SecurityGroup
+      Tags:
+        - Key: Name
+          Value: !Sub "ADCDataENI-${DeploymentId}"
+
+  ServersNetworkInterface:
+    Type: AWS::EC2::NetworkInterface
+    Properties:
+      SubnetId: !Ref ServersSubnet
+      GroupSet:
+        - !Ref SecurityGroup
+      Tags:
+        - Key: Name
+          Value: !Sub "ADCServersENI-${DeploymentId}"
+
+  ElasticIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+
+  EIPAssociation:
+    Type: AWS::EC2::EIPAssociation
+    Properties:
+      NetworkInterfaceId: !Ref ManagementNetworkInterface
+      AllocationId: !GetAtt [ElasticIP, AllocationId]
+
+  EC2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: !Ref InstanceType
+      ImageId: !Ref AmiId
+      NetworkInterfaces:
+        - NetworkInterfaceId: !Ref ManagementNetworkInterface
+          DeviceIndex: 0
+        - NetworkInterfaceId: !Ref DataNetworkInterface
+          DeviceIndex: 1
+        - NetworkInterfaceId: !Ref ServersNetworkInterface
+          DeviceIndex: 2
+      UserData:
+        Fn::Base64: !Sub |
+          {
+            "UserCredentials": {
+              "name": "${AdminUser}",
+              "password": "${AdminPassword}",
+              "cos": "admin"
+            },
+            "GEL": {
+              "status": "ena",
+              "primaryURL": "${GelUrlPrimary}",
+              ${CcRemoteIp != "0.0.0.0" ? `"secondaryURL": "${GelUrlSecondary}",` : ''}
+              "devicename": "${VmName}",
+              "interval": "300",
+              "retryInt": "60",
+              "retries": "3",
+              "entID": "${GelEntId}",
+              "throughput": "${GelThroughputMb}",
+              "addon": "2",
+              "dnspri": "${GelDnsPri}"
+            },
+            "RawConfig": {
+              "Config": "",
+              "ConfigArray": [
+                "/c/sys/access/snmp w",
+                "/cfg/sys/ntp/on/prisrv ${NtpPrimaryServer}/tzone ${NtpTzone}",
+                "/c/sys/ssnmp/auth ena",
+                "/c/sys/ssnmp/snmpv3/taddr 1/name v1v2trap1/addr ${CcLocalIp}/taglist v1v2param1/pname v1v2param1",
+                "/c/sys/ssnmp/snmpv3/tparam 1/name v1v2param1/mpmodel snmpv1/uname v1v2only/model snmpv1",
+                "/c/sys/ssnmp/snmpv3/notify 1/name v1v2Trap1/tag v1v2param1",
+                "/c/sys/ssnmp/snmpv3/comm 1/index trapComm1/name public/uname v1v2only",
+                ${CcRemoteIp != "0.0.0.0" ? `
+                "/c/sys/ssnmp/snmpv3/taddr 2/name v1v2trap2/addr ${CcRemoteIp}/taglist v1v2param2/pname v1v2param2",
+                "/c/sys/ssnmp/snmpv3/tparam 2/name v1v2param2/mpmodel snmpv1/uname v1v2only/model snmpv1",
+                "/c/sys/ssnmp/snmpv3/notify 2/name v1v2Trap2/tag v1v2param2",
+                "/c/sys/ssnmp/snmpv3/comm 2/index trapComm2/name public/uname v1v2only",
+                "/c/slb/real backup_loggerReal/ena/ipver v4/rip ${CcRemoteIp}",
+                "/c/slb/real loggerReal/backup backup_loggerReal",` : ''}
+                "/c/sys/ssnmp/name ${VmName}",
+                "/c/slb/real loggerReal/ena/ipver v4/rip ${CcLocalIp}",
+                "/c/slb/group loggerGroup/ipver v4/add loggerReal",
+                "/c/slb/rlogging logger1/ena/proto tcp/port 5140/group loggerGroup/path mgmt",
+                "/c/l3/if 1/ena/ipver v4/addr ${!GetAtt DataNetworkInterface.PrivateIpAddress}/mask 255.255.255.0",
+                "/c/l3/if 2/ena/ipver v4/addr ${!GetAtt ServersNetworkInterface.PrivateIpAddress}/mask 255.255.255.0/vlan 2",
+                "/c/l3/gw 1/ena/ipver v4/addr ${cidrsubnet(${!Ref SubnetCidrs}[1], 8, 1)}",
+                "/c/l3/gw 2/ena/ipver v4/addr ${cidrsubnet(${!Ref SubnetCidrs}[2], 8, 1)}",
+                "/c/sys/syslog/hst1 ${Hst1Ip} ${Hst1Severity} ${Hst1Facility} ${Hst1Module} ${Hst1Port}",
+                "/c/sys/syslog/hst2 ${Hst2Ip} ${Hst2Severity} ${Hst2Facility} ${Hst2Module} ${Hst2Port}"
+              ]
+            }
+          }
+      Tags:
+        - Key: Name
+          Value: !Sub "ADCInstance-${DeploymentId}"
+
+Outputs:
+  InstanceId:
+    Description: The ID of the EC2 instance
+    Value: !Ref EC2Instance
