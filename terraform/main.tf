@@ -137,14 +137,26 @@ resource "aws_network_interface" "adc_data_eni" {
   }
 }
 
+//resource "aws_network_interface" "adc_servers_eni" {
+//  subnet_id       = aws_subnet.adc_servers_net.id
+//  security_groups = [aws_security_group.adc_alteon_sg.id]
+
+//  tags = {
+//    Name = "ADCServersENI-${var.deployment_id}"
+//  }
+//}
+
 resource "aws_network_interface" "adc_servers_eni" {
   subnet_id       = aws_subnet.adc_servers_net.id
   security_groups = [aws_security_group.adc_alteon_sg.id]
+
+  private_ips = ["${cidrhost(var.subnet_cidrs[2], 10)}", "${cidrhost(var.subnet_cidrs[2], 11)}"]
 
   tags = {
     Name = "ADCServersENI-${var.deployment_id}"
   }
 }
+
 
 resource "aws_eip" "adc_eip" {
   domain = "vpc"
@@ -195,7 +207,9 @@ resource "aws_instance" "adc_instance" {
     cc_local_ip            = var.cc_local_ip,
     cc_remote_ip           = var.cc_remote_ip,
     adc_data_eni_private_ip = aws_network_interface.adc_data_eni.private_ip,
-    adc_servers_eni_private_ip = aws_network_interface.adc_servers_eni.private_ip,
+    //adc_servers_eni_private_ip = aws_network_interface.adc_servers_eni.private_ip,
+    adc_servers_private_ip1 = tolist(aws_network_interface.adc_servers_eni.private_ips)[0],
+    adc_servers_private_ip2 = tolist(aws_network_interface.adc_servers_eni.private_ips)[1],
     data_subnet_gateway    = local.data_subnet_gateway,
     servers_subnet_gateway = local.servers_subnet_gateway
     hst1_ip                = var.hst1_ip,
