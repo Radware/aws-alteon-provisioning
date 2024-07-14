@@ -153,3 +153,9 @@ variable "operation" {
   type        = string
   default     = "create"
 }
+
+variable "gel_enabled" {
+  description = "Enable or disable GEL"
+  type        = bool
+  default     = false
+}

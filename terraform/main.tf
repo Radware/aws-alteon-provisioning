@@ -222,6 +222,7 @@ resource "aws_instance" "adc_instance" {
     hst2_facility          = var.hst2_facility,
     hst2_module            = var.hst2_module,
     hst2_port              = var.hst2_port
+    gel_enabled            = var.gel_enabled
   })
 
   tags = {

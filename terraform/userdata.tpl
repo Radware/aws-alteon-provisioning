@@ -4,6 +4,7 @@
     "password": "${admin_password}",
     "cos": "admin"
   },
+  %{ if gel_enabled }
   "GEL": {
     "status": "ena",
     "primaryURL": "${gel_url_primary}",
@@ -19,6 +20,7 @@
     "addon": "2",
     "dnspri": "${gel_dns_pri}"
   },
+  %{ endif }
   "RawConfig": {
     "Config": "",
     "ConfigArray": [
