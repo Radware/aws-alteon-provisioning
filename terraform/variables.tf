@@ -37,7 +37,7 @@ variable "deployment_id" {
 
 variable "admin_password" {
   description = "Admin password"
-  default     = "admin123"
+  default     = "password1"
 }
 
 variable "admin_user" {

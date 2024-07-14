@@ -86,7 +86,7 @@ ami_id = "ami-09fd2b8b128dc0f2d"
 deployment_id = "default"
 
 # Admin password
-admin_password = "admin123"
+admin_password = "password1"
 
 # Admin username
 admin_user = "admin"
