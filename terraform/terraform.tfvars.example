@@ -26,7 +26,7 @@ admin_password = "password1"
 admin_user = "admin"
 
 # Is GEL enabled for this deployment 
-get_enabled = false
+gel_enabled = false
 
 # GEL primary URL
 gel_url_primary = "http://primary.gel.example.com"
