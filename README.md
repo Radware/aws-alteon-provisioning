@@ -31,7 +31,7 @@ The project supports a variety of configuration options for deploying the Alteon
 - **Admin**: Username, Password.
 - **GEL**: Primary URL, Secondary URL, Enterprise ID, Throughput, Primary DNS.
 - **NTP**: Primary server IP, Time zone.
-- **IP**: Local IP, Remote IP.
+- **SNMP**: Local Cyber Controller IP, Remote Cyber Controller IP.
 - **VM**: Name.
 - **Syslog**: 
   - Host 1: Server IP, Severity, Facility, Module, Port.
