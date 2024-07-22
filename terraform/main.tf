@@ -78,6 +78,7 @@ resource "aws_route_table_association" "adc_data" {
   route_table_id = aws_route_table.adc_public_route_table.id
 }
 
+/*
 resource "aws_security_group" "adc_alteon_sg" {
   name        = "AlteonSG-${var.deployment_id}"
   description = "Security Group for Alteon VA"
@@ -118,10 +119,68 @@ resource "aws_security_group" "adc_alteon_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 }
+*/
+
+# Management security group
+resource "aws_security_group" "adc_mgmt_sg" {
+  name        = "AlteonMgmtSG-${var.deployment_id}"
+  description = "Management Security Group for Alteon VA"
+  vpc_id      = aws_vpc.adc_vpc.id
+
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = var.mgmt_cidr_blocks
+  }
+
+  ingress {
+    from_port   = 2222
+    to_port     = 2222
+    protocol    = "tcp"
+    cidr_blocks = var.mgmt_cidr_blocks
+  }
+
+  ingress {
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = var.mgmt_cidr_blocks
+  }
+
+  tags = {
+    Name = "AlteonMgmtSG-${var.deployment_id}"
+  }
+}
+
+# Data security group
+resource "aws_security_group" "adc_data_sg" {
+  name        = "AlteonDataSG-${var.deployment_id}"
+  description = "Data Security Group for Alteon VA"
+  vpc_id      = aws_vpc.adc_vpc.id
+
+  ingress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1" # All protocols
+    cidr_blocks = var.data_cidr_blocks
+  }
+
+  ingress {
+    from_port   = 3121
+    to_port     = 3121
+    protocol    = "tcp"
+    cidr_blocks = var.data_cidr_blocks
+  }
+
+  tags = {
+    Name = "AlteonDataSG-${var.deployment_id}"
+  }
+}
 
 resource "aws_network_interface" "adc_mgmt_eni" {
   subnet_id       = aws_subnet.adc_mgmt_net.id
-  security_groups = [aws_security_group.adc_alteon_sg.id]
+  security_groups = [aws_security_group.adc_mgmt_sg.id]
 
   tags = {
     Name = "ADCMgmtENI-${var.deployment_id}"
@@ -130,25 +189,16 @@ resource "aws_network_interface" "adc_mgmt_eni" {
 
 resource "aws_network_interface" "adc_data_eni" {
   subnet_id       = aws_subnet.adc_data_net.id
-  security_groups = [aws_security_group.adc_alteon_sg.id]
+  security_groups = [aws_security_group.adc_data_sg.id]
 
   tags = {
     Name = "ADCDataENI-${var.deployment_id}"
   }
 }
 
-//resource "aws_network_interface" "adc_servers_eni" {
-//  subnet_id       = aws_subnet.adc_servers_net.id
-//  security_groups = [aws_security_group.adc_alteon_sg.id]
-
-//  tags = {
-//    Name = "ADCServersENI-${var.deployment_id}"
-//  }
-//}
-
 resource "aws_network_interface" "adc_servers_eni" {
   subnet_id       = aws_subnet.adc_servers_net.id
-  security_groups = [aws_security_group.adc_alteon_sg.id]
+  security_groups = [aws_security_group.adc_data_sg.id]
 
   private_ips = ["${cidrhost(var.subnet_cidrs[2], 10)}", "${cidrhost(var.subnet_cidrs[2], 11)}"]
 

@@ -87,3 +87,9 @@ hst2_module = "all"
 
 # Port for syslog host 2
 hst2_port = 514
+
+# List of CIDR blocks for management security group
+mgmt_cidr_blocks = ["0.0.0.0/0"]
+
+# List of CIDR blocks for data security group
+data_cidr_blocks = ["0.0.0.0/0"]

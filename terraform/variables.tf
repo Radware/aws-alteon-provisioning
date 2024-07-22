@@ -13,6 +13,16 @@ variable "subnet_cidrs" {
   default     = ["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"]
 }
 
+variable "mgmt_cidr_blocks" {
+  description = "List of CIDR blocks for management security group"
+  type        = list(string)
+  default     = ["0.0.0.0/0"]
+}
+variable "data_cidr_blocks" {
+  description = "List of CIDR blocks for data security group"
+  type        = list(string)
+  default     = ["0.0.0.0/0"]
+}
 
 variable "availability_zone" {
   description = "availability zone for the subnets"
